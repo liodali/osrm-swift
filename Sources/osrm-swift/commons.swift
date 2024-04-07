@@ -1,12 +1,12 @@
 //
-//  File.swift
+//  coomons.swift
 //  
 //
 //  Created by Dali Hamza on 07.04.24.
 //
 
 import Foundation
-
+import MapKit
 
 typealias GeoPoint = [String: Double]
 
@@ -82,3 +82,28 @@ let DIRECTIONS = [
     33: ["en": "Enter roundabout and leave at seventh exit[ on %s]", "de": ""],
     34: ["en": "Enter roundabout and leave at eighth exit[ on %s]", "de": ""],
 ]
+
+func readResources(resourceName:String,ext:String = "json")->[String : Any]?{
+    do {
+        if let bundlePath = Bundle.main.path(forResource: resourceName, ofType: ext),
+          let jsonData = try String(contentsOfFile: bundlePath).data(using: .utf8) {
+             if let json = try JSONSerialization.jsonObject(with: jsonData, options: .mutableLeaves) as? [String: Any] {
+                return json
+             } else {
+                print("Given JSON is not a valid dictionary object.")
+                 return nil
+             }
+          }
+       } catch {
+          print(error)
+       }
+    return nil
+}
+
+extension Array where Element == CLLocationCoordinate2D {
+    func toString()-> String {
+        map { location in
+            "\(location.longitude),\(location.latitude)"
+        }.joined(separator: ";")
+    }
+}

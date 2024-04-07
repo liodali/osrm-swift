@@ -8,15 +8,7 @@ import Foundation
 import MapKit
 import Polyline
 
-struct StoredRoad: Equatable {
-    static func == (lhs: StoredRoad, rhs: StoredRoad) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    let id:String
-    let roadInformation:RoadInformation?
-    let instructions:[RoadInstruction]
-}
+
 struct RoadInformation: Equatable {
     let id: String
     let distance: Double
@@ -25,16 +17,9 @@ struct RoadInformation: Equatable {
 }
 
 
-struct RoadInstruction {
+public struct RoadInstruction {
     var location: CLLocationCoordinate2D
     var instruction: String
-}
-
-struct RoadData {
-    var roadColor: String = "#ff0000"
-    var roadWidth: Double = 5.0
-    var roadBorderWidth: Double?
-    var roadBorderColor: String? = nil
 }
 /**
  * Road
@@ -43,9 +28,7 @@ struct RoadData {
  *  OSRM API or any other third party API that provider the same service as OSRM
  */
 public struct Road {
-    var steps: [RoadNode] = []
     var legs: [RoadLeg] = []
-    var roadData: RoadData = RoadData()
     public var distance: Double = 0.0
     public var duration: Double = 0
     public var mRouteHigh: String = ""
@@ -60,36 +43,21 @@ public struct Road {
                 mRouteHigh = route["geometry"] as! String
                 let jsonLegs = route["legs"] as! [[String: Any]]
                 jsonLegs.enumerated().forEach { indexLeg,jLeg in
-                    var legR: RoadLeg = RoadLeg()
-                    legR.distance = (jLeg["distance"] as! Double) / 1000
-                    legR.duration = jLeg["duration"] as! Double
+                    var legRoad: RoadLeg = RoadLeg()
+                    legRoad.distance = (jLeg["distance"] as! Double) / 1000
+                    legRoad.duration = jLeg["duration"] as! Double
 
                     let jsonSteps = jLeg["steps"] as! [[String: Any?]]
-                    var lastName = ""
-                    var lastNode: RoadNode? = nil
                     jsonSteps.enumerated().forEach { index,step in
                         let maneuver = (step["maneuver"] as! [String: Any?])
                         let location = maneuver["location"] as! [Double]
-                        var node = RoadNode(
-                                location: CLLocationCoordinate2D(
-                                        latitude: (location)[1],
-                                        longitude: (location)[0]
-                                )
+                        let cLocation = CLLocationCoordinate2D(
+                            latitude: (location)[1],
+                            longitude: (location)[0]
                         )
-                        node.distance = (step["distance"] as! Double) / 1000
-                        node.duration = step["duration"] as! Double
-                        let roadStep = RoadStep(json: step)
-                        /*node.instruction = roadStep.buildInstruction(instructions: instructionResource,options: [
-                            "legIndex":indexLeg , "legCount" : jsonLegs.count - 1
-                        ])*/
-                        if lastNode != nil && roadStep.maneuver.maneuverType == "new name" && lastName == roadStep.name {
-                            lastNode?.duration += node.duration
-                            lastNode?.distance += node.distance
-                        } else {
-                            steps.append(node)
-                            lastNode = node
-                            lastName = roadStep.name
-                        }
+                        let roadStep = RoadStep(json: step,location: cLocation)
+                        legRoad.steps.append(roadStep)
+                        
                     }
 
                 }
@@ -104,6 +72,8 @@ struct RoadLeg {
     var distance: Double = 0
     /** in sec */
     public var duration: Double = 0
+    
+    var steps: [RoadStep] = []
 }
 
 struct RoadNode {
@@ -112,7 +82,7 @@ struct RoadNode {
     var distance: Double = 0.0
     var duration: Double = 0
     var maneuver: Int = 0
-
+   
     init(location: CLLocationCoordinate2D) {
         self.location = location
     }
@@ -121,24 +91,13 @@ struct RoadNode {
 struct RoadConfig {
     var wayPoints: [GeoPoint]
     var intersectPoints: [GeoPoint]?
-    var roadData: RoadData
     var roadType: RoadType
 }
 
 
-struct RoadFolder : Equatable {
-    static func == (lhs: RoadFolder, rhs: RoadFolder) -> Bool {
-        lhs.id == rhs.id
-    }
-    
-    let id: String
-    //var tgRouteMarker: TGMarker
-    var polyline: Polyline
-    let roadInformation: RoadInformation?
-}
-
 
 struct RoadStep {
+    var location: CLLocationCoordinate2D
     var name: String
     var ref: String?
     var rotaryName: String? = nil
@@ -150,7 +109,8 @@ struct RoadStep {
     var intersections: [Intersections]
     var drivingSide: String
 
-    init(json: [String: Any?]) {
+    init(json: [String: Any?],location: CLLocationCoordinate2D) {
+        self.location = location
         name = json["name"] as! String? ?? ""
         if json.keys.contains("ref") {
             ref = json["ref"] as? String

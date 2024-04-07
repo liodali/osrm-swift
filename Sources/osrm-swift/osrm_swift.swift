@@ -36,18 +36,19 @@ public struct RoadConfiguration {
 
 protocol PRoadManager {
 
-    func getRoad(wayPoints: [String], roadConfiguration: RoadConfiguration, handler: @escaping RoadHandler)
-    func buildInstruction(road:Road,language:Languages)
+    func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration, handler: @escaping RoadHandler)
+    func buildInstruction(road:Road,language:Languages)throws -> [RoadInstruction]
     
 }
 public enum OSRMManagerError:Error {
     case NOTSecuredURL(String)
     case ParseResponse(String)
+    case ErrorToLoadLanguageResources
 }
 
 public class OSRMManager: PRoadManager {
     
-    
+   
     let baseOSRMURL:String
     public init(baseOSRMURL: String) throws {
         if baseOSRMURL.contains("http://") {
@@ -59,7 +60,7 @@ public class OSRMManager: PRoadManager {
             "https://\(baseOSRMURL)"
         }
     }
-    public func getRoad(wayPoints: [String],roadConfiguration: RoadConfiguration,  handler: @escaping RoadHandler) {
+    public func getRoad(wayPoints: [CLLocationCoordinate2D],roadConfiguration: RoadConfiguration,  handler: @escaping RoadHandler) {
         let serverURL = buildURL(wayPoints, roadConfiguration)
         guard let url = Bundle(for: type(of: self)).url(forResource: "en",
                                                         withExtension: "json") else {
@@ -89,28 +90,44 @@ public class OSRMManager: PRoadManager {
         }
     }
     
-    func buildInstruction(road: Road, language: Languages) {
-        let roadLeg = road.legs
-        let instructionHelper = 
+    public func buildInstruction(road: Road, language: Languages)throws ->[RoadInstruction] {
+        let legs = road.legs
+        let roadSteps = road.legs
+        let instructionHelper = readResources(resourceName:language.rawValue)
+        var instructions:[RoadInstruction] = [RoadInstruction]()
+        if  instructionHelper == nil {
+            throw OSRMManagerError.ErrorToLoadLanguageResources
+        }
+        do {
+            for (index,leg) in roadSteps.enumerated() {
+                for step in leg.steps {
+                    let instruction =  try step.buildInstruction(instructions: instructionHelper!, options: [
+                        "legIndex":index , "legCount" : road.legs.count - 1
+                    ])
+                    instructions.append(RoadInstruction(location: step.location, instruction: instruction))
+                }
+            }
+        } catch let e {
+            
+        }
+            
+        return []
     }
     
     
-    private func buildURL(_ waysPoints: [String], _ configuration: RoadConfiguration) -> String {
+    
+}
+extension OSRMManager {
+     func buildURL(_ waysPoints: [CLLocationCoordinate2D], _ configuration: RoadConfiguration) -> String {
         var server = baseOSRMURL
         if server.last == "/" {
             server.removeLast()
         }
         let  serverBaseURL = "\(baseOSRMURL)/\(configuration.typeRoad.rawValue)/route/v1/driving/"
-        let points = waysPoints.reduce("") { (result, s) in
-            "\(result);\(s)"
-        }
-        var stringWayPoint = points
-        stringWayPoint.removeFirst()
-
-
-        return "\(serverBaseURL)\(stringWayPoint)?alternatives=\(configuration.alternative)&overview=\(configuration.overview.rawValue)steps=\(configuration.steps)"
+        let points = waysPoints.toString()
+         return "\(serverBaseURL)\(points)?steps=\(configuration.steps)&overview=\(configuration.overview.rawValue)&geometries=\(configuration.geometrie.rawValue)&alternatives=\(configuration.alternative)"
     }
-    private func parse(jsonData: Data?) -> [String:Any] {
+     func parse(jsonData: Data?) -> [String:Any] {
         if jsonData == nil {
             return [String:Any]()
         }
