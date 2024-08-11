@@ -160,10 +160,9 @@ extension OSRMManager {
         return [String:Any]()
     }
     private func httpCall(url: String, parseHandler: @escaping (_ json: [String: Any?]?) -> Void)  {
-        let parameters: [String: [String]] = [:]
+      
         print("httpCall \(url)")
-        session.request(url, method: .get,parameters: parameters
-                        /*,encoder: JSONParameterEncoder.default*/).responseJSON { response in
+        session.request(url, method: .get).responseJSON { response in
             if response.data != nil {
                 let data = response.value as? [String: Any?]
                 parseHandler(data)

@@ -39,7 +39,7 @@ final class osrm_swiftTests: XCTestCase {
             stub( condition: isHost("routing.openstreetmap.de")) { _  in
               // Stub it with our "wsresponse.json" stub file OHHTTPStubsResponse
                  let resp =   HTTPStubsResponse(
-                         fileURL: url,
+                          fileURL: url,
                           //jsonObject: roadJson,
                           statusCode: 200,
                           headers: ["Content-Type":"application/json"]

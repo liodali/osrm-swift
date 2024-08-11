@@ -2,7 +2,7 @@
 # OSRM Swift Package
 
 
-![swift-package](https://img.shields.io/badge/0.1.1-orange)
+![swift--package](https://img.shields.io/badge/swift--package-0.1.2-orange)
 
 * this package is wrapping for orsm server,where we trying to simplify make in request and retrive the instruction of the route
 
