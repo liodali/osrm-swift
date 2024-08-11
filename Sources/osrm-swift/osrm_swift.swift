@@ -48,7 +48,12 @@ public enum OSRMManagerError:Error {
     case ParseResponse(String)
     case ErrorToLoadLanguageResources
 }
-
+/// OSRMManager
+///
+///  this class is OSRM manager where we use open source OSRM server to find routing (route)
+///  using OSRMManager you can retrieve road between 2 geographic points and as well retrieve instruction of that route
+///  make in consideration that our function
+///
 public class OSRMManager: PRoadManager {
 
     private var session = Session.default
@@ -63,7 +68,12 @@ public class OSRMManager: PRoadManager {
             "https://\(baseOSRMURL)"
         }
     }
-    
+    /// getRoad
+    ///
+    /// this function will call our routing server to return  [Road]
+    /// where it accept List of [CLLocationCoordinate2D] and using [RoadConfiguration] you can configure the request
+    ///
+    /// this function will return the desired Object using the completion handler (if you want to use async await use our method [getRoadAsync]
     func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration, completion: @escaping RoadHandler){
         let serverURL = buildURL(wayPoints, roadConfiguration)
         DispatchSerialQueue.main.async {
@@ -78,12 +88,13 @@ public class OSRMManager: PRoadManager {
             }
         }
     }
-    
+    /// getRoadAsync
+    ///
+    /// this is async  function for getRoad
     public func getRoadAsync(wayPoints: [CLLocationCoordinate2D],
                         roadConfiguration: RoadConfiguration) async -> Road? {
         do {
             let serverURL = buildURL(wayPoints, roadConfiguration)
-            print("server \(serverURL)")
             return try await withCheckedThrowingContinuation { continuation in
                 self.httpCall(url: serverURL) { jsonM in
                     if let map = jsonM {
@@ -99,7 +110,9 @@ public class OSRMManager: PRoadManager {
             return nil
         }
     }
-    
+    /// buildInstruction
+    ///
+    /// this function will generate instruction of latest searched road
     public func buildInstruction(road: Road, language: Languages) throws ->[RoadInstruction] {
         let roadSteps = road.legs
         let instructionHelper = readResources(resourceName:language.rawValue)
@@ -155,7 +168,6 @@ extension OSRMManager {
                 let data = response.value as? [String: Any?]
                 parseHandler(data)
             } else {
-                print(response.result)
                 parseHandler(nil)
             }
         }
