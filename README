@@ -2,7 +2,7 @@
 # OSRM Swift Package
 
 
-![swift-package](https://img.shields.io/badge/0.1.0-orange)
+![swift-package](https://img.shields.io/badge/0.1.1-orange)
 
 * this package is wrapping for orsm server,where we trying to simplify make in request and retrive the instruction of the route
 
@@ -24,9 +24,9 @@ dependencies: [
   // prepare geopoints
   let coords = "13.388860,52.517037;13.397634,52.529407;13.428555,52.523219".toWaypoints()
   //using Async function
-  let roadData =  try await  osrmManager.getRoadAsync(wayPoints: coords, roadConfiguration: RoadConfiguration())
+  let roadData =  try await  osrmManager.getRoadAsync(wayPoints: coords, configuration: InputRoadConfiguration())
    //using normal function
-   osrmManager.getRoadAsync(wayPoints: coords, roadConfiguration: RoadConfiguration()){ roadData in
+   osrmManager.getRoadAsync(wayPoints: coords, configuration: InputRoadConfiguration()){ roadData in
      // apply your logic here
     }
                  

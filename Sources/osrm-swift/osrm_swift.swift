@@ -19,7 +19,7 @@ public enum RoadType: String {
 public enum Languages: String {
     case en = "en"
 }
-public struct RoadConfiguration {
+public struct InputRoadConfiguration {
     let typeRoad: RoadType
     let overview:Overview
     let geometrie:Geometries
@@ -37,8 +37,8 @@ public struct RoadConfiguration {
 protocol PRoadManager {
 
     func getRoadAsync(wayPoints: [CLLocationCoordinate2D],
-                    roadConfiguration: RoadConfiguration) async throws -> Road?
-    func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration,
+                      configuration: InputRoadConfiguration) async throws -> Road?
+    func getRoad(wayPoints: [CLLocationCoordinate2D], configuration: InputRoadConfiguration,
                completion:@escaping RoadHandler)
     func buildInstruction(road:Road,language:Languages)throws -> [RoadInstruction]
     
@@ -74,8 +74,8 @@ public class OSRMManager: PRoadManager {
     /// where it accept List of [CLLocationCoordinate2D] and using [RoadConfiguration] you can configure the request
     ///
     /// this function will return the desired Object using the completion handler (if you want to use async await use our method [getRoadAsync]
-    func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration, completion: @escaping RoadHandler){
-        let serverURL = buildURL(wayPoints, roadConfiguration)
+    func getRoad(wayPoints: [CLLocationCoordinate2D], configuration: InputRoadConfiguration, completion: @escaping RoadHandler){
+        let serverURL = buildURL(wayPoints, configuration)
         DispatchSerialQueue.main.async {
             self.httpCall(url: serverURL) { jsonM in
                 if let map = jsonM {
@@ -92,9 +92,9 @@ public class OSRMManager: PRoadManager {
     ///
     /// this is async  function for getRoad
     public func getRoadAsync(wayPoints: [CLLocationCoordinate2D],
-                        roadConfiguration: RoadConfiguration) async -> Road? {
+                             configuration: InputRoadConfiguration) async -> Road? {
         do {
-            let serverURL = buildURL(wayPoints, roadConfiguration)
+            let serverURL = buildURL(wayPoints, configuration)
             return try await withCheckedThrowingContinuation { continuation in
                 self.httpCall(url: serverURL) { jsonM in
                     if let map = jsonM {
@@ -138,7 +138,7 @@ public class OSRMManager: PRoadManager {
 
 }
 extension OSRMManager {
-     func buildURL(_ waysPoints: [CLLocationCoordinate2D], _ configuration: RoadConfiguration) -> String {
+     func buildURL(_ waysPoints: [CLLocationCoordinate2D], _ configuration: InputRoadConfiguration) -> String {
         var server = baseOSRMURL
         if server.last == "/" {
             server.removeLast()

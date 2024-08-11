@@ -14,7 +14,7 @@ final class osrm_swiftTests: XCTestCase {
         ];
         let osrmManager = try OSRMManager(baseOSRMURL: "https://routing.openstreetmap.de")
         let serverURL = osrmManager.buildURL(waypoints,
-                                             RoadConfiguration(
+                                             InputRoadConfiguration(
                                                 typeRoad: RoadType.car,overview: Overview.full,
                                                 steps: true,alternative: false))
         let result = "https://routing.openstreetmap.de/routed-car/route/v1/driving/13.38886,52.517037;13.397634,52.529407;13.428555,52.523219?steps=true&overview=full&geometries=polyline&alternatives=false"
@@ -49,7 +49,7 @@ final class osrm_swiftTests: XCTestCase {
             let roadExpected = Road(json:roadJson)
             let osrmManager = try OSRMManager()
             print("url mocker \(urlMock.absoluteString)")
-            let roadData =  try await  osrmManager.getRoadAsync(wayPoints: coords, roadConfiguration: RoadConfiguration())
+            let roadData =  try await  osrmManager.getRoadAsync(wayPoints: coords, configuration: InputRoadConfiguration())
             XCTAssertTrue(roadData == roadExpected)
             HTTPStubs.removeAllStubs()
         }catch {
