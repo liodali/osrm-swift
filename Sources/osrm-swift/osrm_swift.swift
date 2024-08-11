@@ -58,7 +58,7 @@ public class OSRMManager: PRoadManager {
 
     private var session = Session.default
     let baseOSRMURL:String
-    public init(baseOSRMURL: String) throws {
+    public init(baseOSRMURL: String = "https://routing.openstreetmap.de") throws {
         if baseOSRMURL.contains("http://") {
             throw OSRMManagerError.NOTSecuredURL("use https for open source osrm server, if you're using your own server please use lets encrypt")
         }

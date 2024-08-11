@@ -47,7 +47,7 @@ final class osrm_swiftTests: XCTestCase {
                 return resp
             }
             let roadExpected = Road(json:roadJson)
-            let osrmManager = try OSRMManager(baseOSRMURL: "https://routing.openstreetmap.de")
+            let osrmManager = try OSRMManager()
             print("url mocker \(urlMock.absoluteString)")
             let roadData =  try await  osrmManager.getRoadAsync(wayPoints: coords, roadConfiguration: RoadConfiguration())
             XCTAssertTrue(roadData == roadExpected)
