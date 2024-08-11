@@ -9,7 +9,11 @@ import Foundation
 import MapKit
 
 typealias GeoPoint = [String: Double]
-
+enum RoadError: Error {
+    case parsing
+    case emptyResult
+    case unknown
+}
 public enum Overview: String {
   case simplified = "simplified"
   case full = "full"
@@ -83,7 +87,7 @@ let DIRECTIONS = [
     34: ["en": "Enter roundabout and leave at eighth exit[ on %s]", "de": ""],
 ]
 
-func readResources(resourceName:String,ext:String = "json")->[String : Any]?{
+func readResources(resourceName:String,ext:String = "json") -> [String : Any]?{
     do {
         if let bundlePath = Bundle.main.path(forResource: resourceName, ofType: ext),
           let jsonData = try String(contentsOfFile: bundlePath).data(using: .utf8) {
@@ -91,7 +95,7 @@ func readResources(resourceName:String,ext:String = "json")->[String : Any]?{
                 return json
              } else {
                 print("Given JSON is not a valid dictionary object.")
-                 return nil
+                return nil
              }
           }
        } catch {
@@ -105,5 +109,14 @@ extension Array where Element == CLLocationCoordinate2D {
         map { location in
             "\(location.longitude),\(location.latitude)"
         }.joined(separator: ";")
+    }
+}
+extension String {
+    func toWaypoints() -> [CLLocationCoordinate2D]{
+        return self.components(separatedBy: ";").map { waypoint in
+            let geoPoints:[String] = waypoint.components(separatedBy: ",")
+            let (lon,lat) = (geoPoints.first!, geoPoints.last!)
+            return CLLocationCoordinate2D(latitude:Double(lat)!,longitude:Double(lon)!)
+        }
     }
 }

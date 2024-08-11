@@ -27,7 +27,9 @@ public struct RoadInstruction {
  *  this Class responsible to contain the information need it for poyline or road that we will get from
  *  OSRM API or any other third party API that provider the same service as OSRM
  */
-public struct Road {
+public struct Road : Equatable {
+    
+    
     var legs: [RoadLeg] = []
     public var distance: Double = 0.0
     public var duration: Double = 0
@@ -63,6 +65,10 @@ public struct Road {
                 }
             }
         }
+    }
+    
+    public static func == (lhs: Road, rhs: Road) -> Bool {
+        lhs.mRouteHigh == rhs.mRouteHigh
     }
    
 }
@@ -199,7 +205,7 @@ extension RoadStep {
         }
 
         var instructionObject = (instructionsV5[type] as! [String: Any])["default"] as! [String: Any]
-        var omitSide = type == "off ramp" && ((maneuver.modifier?.index(ofAccessibilityElement: drivingSide) ?? 0) >= 0);
+        let omitSide = type == "off ramp" && ((maneuver.modifier?.index(ofAccessibilityElement: drivingSide) ?? 0) >= 0);
         if maneuver.modifier != nil && (instructionsV5[type] as! [String: Any]).keys.contains(maneuver.modifier!) && !omitSide {
             instructionObject = (instructionsV5[type] as! [String: Any])[maneuver.modifier!] as! [String: Any]
         }

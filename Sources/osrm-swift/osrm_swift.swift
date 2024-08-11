@@ -9,7 +9,7 @@ import Polyline
 
 typealias ParserJson = ([String: Any?]?) -> Road
 public typealias RoadHandler = (Road?) -> Void
-
+public typealias json = [String: Any?]
 
 public enum RoadType: String {
     case car = "routed-car"
@@ -36,7 +36,10 @@ public struct RoadConfiguration {
 
 protocol PRoadManager {
 
-    func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration, handler: @escaping RoadHandler)
+    func getRoadAsync(wayPoints: [CLLocationCoordinate2D],
+                    roadConfiguration: RoadConfiguration) async throws -> Road?
+    func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration,
+               completion:@escaping RoadHandler)
     func buildInstruction(road:Road,language:Languages)throws -> [RoadInstruction]
     
 }
@@ -47,8 +50,8 @@ public enum OSRMManagerError:Error {
 }
 
 public class OSRMManager: PRoadManager {
-    
-   
+
+    private var session = Session.default
     let baseOSRMURL:String
     public init(baseOSRMURL: String) throws {
         if baseOSRMURL.contains("http://") {
@@ -60,38 +63,44 @@ public class OSRMManager: PRoadManager {
             "https://\(baseOSRMURL)"
         }
     }
-    public func getRoad(wayPoints: [CLLocationCoordinate2D],roadConfiguration: RoadConfiguration,  handler: @escaping RoadHandler) {
+    
+    func getRoad(wayPoints: [CLLocationCoordinate2D], roadConfiguration: RoadConfiguration, completion: @escaping RoadHandler){
         let serverURL = buildURL(wayPoints, roadConfiguration)
-        guard let url = Bundle(for: type(of: self)).url(forResource: "en",
-                                                        withExtension: "json") else {
-            return print("File not found")
-        }
-        var contentLangEn: [String:Any] = [String:Any]()
-        do {
-            let data = try String(contentsOf: url).data(using: .utf8)
-            contentLangEn = parse(jsonData: data)
-        } catch let error {
-            print(error)
-        }
-
-        DispatchQueue.global(qos: .background).async {
-            self.httpCall(url: serverURL) { json in
-                if json != nil {
-                    let road = self.parserRoad(json: json!, instructionResource: contentLangEn)
-                    DispatchQueue.main.async {
-                        handler(road)
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        handler(nil)
-                    }
+        DispatchSerialQueue.main.async {
+            self.httpCall(url: serverURL) { jsonM in
+                if let map = jsonM {
+                    let road = self.parserRoad(json: map)
+                    completion(road)
+                }else{
+                    completion(nil)
                 }
+              
             }
         }
     }
     
-    public func buildInstruction(road: Road, language: Languages)throws ->[RoadInstruction] {
-        let legs = road.legs
+    public func getRoadAsync(wayPoints: [CLLocationCoordinate2D],
+                        roadConfiguration: RoadConfiguration) async -> Road? {
+        do {
+            let serverURL = buildURL(wayPoints, roadConfiguration)
+            print("server \(serverURL)")
+            return try await withCheckedThrowingContinuation { continuation in
+                self.httpCall(url: serverURL) { jsonM in
+                    if let map = jsonM {
+                        let road = self.parserRoad(json: map)
+                        continuation.resume(returning: road)
+                    }else{
+                        continuation.resume(throwing: RoadError.emptyResult)
+                    }
+                }
+            }
+        } catch {//AFError
+            //print("Caught an unexpected error: \(error)")
+            return nil
+        }
+    }
+    
+    public func buildInstruction(road: Road, language: Languages) throws ->[RoadInstruction] {
         let roadSteps = road.legs
         let instructionHelper = readResources(resourceName:language.rawValue)
         var instructions:[RoadInstruction] = [RoadInstruction]()
@@ -102,20 +111,18 @@ public class OSRMManager: PRoadManager {
             for (index,leg) in roadSteps.enumerated() {
                 for step in leg.steps {
                     let instruction =  try step.buildInstruction(instructions: instructionHelper!, options: [
-                        "legIndex":index , "legCount" : road.legs.count - 1
+                        "legIndex":index , "legCount" : roadSteps.count - 1
                     ])
                     instructions.append(RoadInstruction(location: step.location, instruction: instruction))
                 }
             }
         } catch let e {
-            
+            print(e)
         }
             
         return []
     }
-    
-    
-    
+
 }
 extension OSRMManager {
      func buildURL(_ waysPoints: [CLLocationCoordinate2D], _ configuration: RoadConfiguration) -> String {
@@ -139,19 +146,38 @@ extension OSRMManager {
         }
         return [String:Any]()
     }
-    private func httpCall(url: String, parseHandler: @escaping (_ json: [String: Any?]?) -> Void) {
+    private func httpCall(url: String, parseHandler: @escaping (_ json: [String: Any?]?) -> Void)  {
         let parameters: [String: [String]] = [:]
-        AF.request(url, method: .get,parameters: parameters,encoder: JSONParameterEncoder.prettyPrinted).responseData { response in
+        print("httpCall \(url)")
+        session.request(url, method: .get,parameters: parameters
+                        /*,encoder: JSONParameterEncoder.default*/).responseJSON { response in
             if response.data != nil {
-                let data = response.value as? [String: Any?]?
-                parseHandler(data!)
+                let data = response.value as? [String: Any?]
+                parseHandler(data)
             } else {
+                print(response.result)
                 parseHandler(nil)
             }
         }
     }
-
-    private func parserRoad(json: [String: Any?], instructionResource: [String:Any]) -> Road {
+    private func httpCallAsync(url: String) async throws ->  json? {
+        return try await withCheckedThrowingContinuation { continuation in
+            let parameters: [String: [String]] = [:]
+            session.request(url, method: .get,parameters: parameters,encoder: JSONParameterEncoder.prettyPrinted).responseData { response in
+                if response.data != nil {
+                    let data = response.value as? [String: Any?]?
+                    continuation.resume(returning: data!)
+                } else {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+    private func parserRoad(json: [String: Any?]) -> Road {
        Road(json: json)
+    }
+
+    internal func setAFSession(urlSessionConf:URLSessionConfiguration){
+        session = Session(configuration: urlSessionConf)
     }
 }
